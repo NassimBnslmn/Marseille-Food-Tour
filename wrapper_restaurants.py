@@ -5,12 +5,12 @@ from sqlalchemy import create_engine, types
 # 🔧 Configuration PostgreSQL
 DB_NAME = "food_tour"
 DB_USER = "postgres"
-DB_PASSWORD = "Karismarseille13="
+DB_PASSWORD = "root"
 DB_HOST = "localhost"
 DB_PORT = "5432"
 
 TABLE_NAME = "restaurants"
-CSV_PATH = "restaurants_marseille_nettoyes.csv"
+CSV_PATH = "restaurants_final.csv"
 
 column_types = {
     "nom": types.Text(),
@@ -25,16 +25,6 @@ column_types = {
     "classements": types.Text()
 }
 
-def clean_lat_lon(df):
-    for col in ["latitude", "longitude"]:
-        if col in df.columns:
-            # 🔄 Remplacer les virgules par des points et enlever les guillemets
-            df[col] = df[col].astype(str).str.replace(",", ".").str.replace('"', '').str.strip()
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        else:
-            print(f"⚠️ La colonne {col} est manquante dans le fichier CSV.")
-    return df
-
 def inject_csv_to_postgres(csv_path, table_name):
     try:
         engine = create_engine(f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}')
@@ -43,7 +33,6 @@ def inject_csv_to_postgres(csv_path, table_name):
         df = pd.read_csv(csv_path)
 
         df["code_postal"] = pd.to_numeric(df["code_postal"], errors='coerce').astype("Int64")
-        df = clean_lat_lon(df)  # 🔧 nettoyage de latitude et longitude
 
         print(f"📤 Insertion dans la table '{table_name}' avec types explicites...")
         df.to_sql(table_name, engine, if_exists='replace', index=False, dtype=column_types)
@@ -54,3 +43,25 @@ def inject_csv_to_postgres(csv_path, table_name):
 
 if __name__ == "__main__":
     inject_csv_to_postgres(CSV_PATH, TABLE_NAME)
+    # test select
+    try:
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
+        )
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM {TABLE_NAME} LIMIT 5;")
+        rows = cursor.fetchall()
+        for row in rows:
+            print(row)
+    except Exception as e:
+        print(f"❌ Erreur lors de la sélection : {e}")
+    finally:
+        if conn:
+            cursor.close()
+            conn.close()
+            print("✅ Connexion fermée.")
+

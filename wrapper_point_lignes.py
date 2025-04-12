@@ -6,7 +6,7 @@ from sqlalchemy import create_engine
 # 🔧 Configuration PostgreSQL
 DB_NAME = "food_tour"
 DB_USER = "postgres"
-DB_PASSWORD = "Karismarseille13="
+DB_PASSWORD = "root"
 DB_HOST = "localhost"
 DB_PORT = "5432"
 
@@ -51,3 +51,23 @@ def inject_points_dans_bdd(csv_path, table_name):
 
 if __name__ == "__main__":
     inject_points_dans_bdd(CSV_PATH, TABLE_NAME)
+
+    # test select
+    try:
+        conn = psycopg2.connect(
+            dbname=DB_NAME,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            host=DB_HOST,
+            port=DB_PORT
+        )
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT * FROM {TABLE_NAME} LIMIT 5;")
+        rows = cursor.fetchall()
+        for row in rows:
+            print(row)
+    except Exception as e:
+        print(f"❌ Erreur lors de la sélection : {e}")
+    finally:
+        cursor.close()
+        conn.close()

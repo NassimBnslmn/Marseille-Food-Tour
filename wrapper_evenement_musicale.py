@@ -4,7 +4,7 @@ from sqlalchemy import create_engine
 # Configuration PostgreSQL
 DB_NAME = "food_tour"
 DB_USER = "postgres"
-DB_PASSWORD = "Karismarseille13="
+DB_PASSWORD = "root"
 DB_HOST = "localhost"
 DB_PORT = "5432"
 TABLE_NAME = "evenements"
