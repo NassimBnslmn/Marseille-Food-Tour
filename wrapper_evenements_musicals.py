@@ -3,6 +3,7 @@ import psycopg2
 from sqlalchemy import create_engine, types, text
 from dotenv import load_dotenv
 import os
+
 load_dotenv()
 
 # 🗂️ Environment variables
@@ -12,17 +13,21 @@ DB_NAME = os.getenv("DB_NAME")
 DB_USER = os.getenv("DB_USER")
 DB_PASSWORD = os.getenv("DB_PASSWORD")
 
-TABLE_NAME = "arrets_transport"
-CSV_PATH = "cleaned_arrets.csv"
+TABLE_NAME = "evenements_musicaux"
+CSV_PATH = "evenement_musical_cleaned.csv"
 
-# 🧱 Define column types (all column names will be in lowercase)
+# 🎼 Define column types
 column_types = {
-    "id": types.Text(),
-    "name": types.Text(),
+    "titre": types.Text(),
+    "description": types.Text(),
+    "nom_lieu": types.Text(),
+    "adresse": types.Text(),
+    "ville": types.Text(),
+    "code_postal": types.Integer(),
     "latitude": types.Numeric(9, 6),
     "longitude": types.Numeric(9, 6),
-    "description": types.Text(),
-    "wheelchair boarding": types.Integer()
+    "date_debut": types.DateTime(),
+    "date_fin": types.DateTime()
 }
 
 def inject_csv_to_postgres(csv_path, table_name):
@@ -30,31 +35,24 @@ def inject_csv_to_postgres(csv_path, table_name):
         engine = create_engine(
             f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
         )
-        
+
         print(f"📄 Reading CSV file: {csv_path}")
-        df = pd.read_csv(csv_path)
-        
-        # Convert all column names to lowercase (strip whitespace as well)
-        df.columns = df.columns.str.strip().str.lower()
-        
-        # Manipulate the 'coordinates' column:
-        # Assume the CSV initially has a column "coordinates" (or adjust if it's spelled differently)
-        # Split the coordinates into "latitude" and "longitude"
-        if "coordinates" in df.columns:
-            print("🛠️ Splitting 'coordinates' into 'latitude' and 'longitude'...")
-            df[['latitude', 'longitude']] = df['coordinates'].str.split(',', expand=True)
-            df['latitude'] = df['latitude'].astype(float)
-            df['longitude'] = df['longitude'].astype(float)
-            df = df.drop(columns=['coordinates'])
-        else:
-            print("ℹ️ No 'coordinates' column found. Check your CSV format.")
-        
-        print(f"📤 Inserting data into table '{table_name}' with explicit types...")
-        df.to_sql(table_name, engine, if_exists='replace', index=False, dtype=column_types)
-        print(f"✅ Data successfully inserted into table '{table_name}'.")
+        df = pd.read_csv(csv_path, parse_dates=["date_debut", "date_fin"])
+
+        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
+        print("Detected columns:", df.columns.tolist())
+
+        df["code_postal"] = pd.to_numeric(df["code_postal"], errors="coerce").astype("Int64")
+        df["longitude"] = pd.to_numeric(df["longitude"], errors="coerce")
+        df["latitude"] = pd.to_numeric(df["latitude"], errors="coerce")
+
+        print(f"📤 Inserting data into '{table_name}'...")
+        df.to_sql(table_name, engine, if_exists="replace", index=False, dtype=column_types)
+        print(f"✅ Data inserted into '{table_name}'.")
 
         # Add geography column (instead of geometry)
         with engine.begin() as connection:
+            # connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
             connection.execute(text(f"""
                 ALTER TABLE {table_name}
                 ADD COLUMN IF NOT EXISTS geog geography(Point, 4326);
@@ -65,14 +63,13 @@ def inject_csv_to_postgres(csv_path, table_name):
                 WHERE longitude IS NOT NULL AND latitude IS NOT NULL;
             """))
             print("🧭 Geography column 'geog' added and populated.")
-        
+
     except Exception as e:
-        print(f"❌ Error during injection: {e}")
+        print(f"❌ Error: {e}")
 
 if __name__ == "__main__":
     inject_csv_to_postgres(CSV_PATH, TABLE_NAME)
 
-    # 🔎 Quick SELECT test
     try:
         conn = psycopg2.connect(
             dbname=DB_NAME,
@@ -82,12 +79,11 @@ if __name__ == "__main__":
             port=DB_PORT
         )
         cursor = conn.cursor()
-        cursor.execute(f'SELECT id, name, latitude, longitude, description, "wheelchair boarding" FROM {TABLE_NAME} LIMIT 5;')
-        rows = cursor.fetchall()
-        for row in rows:
+        cursor.execute(f"SELECT * FROM {TABLE_NAME} LIMIT 1;")
+        for row in cursor.fetchall():
             print(row)
     except Exception as e:
-        print(f"❌ Error during selection: {e}")
+        print(f"❌ Error during test SELECT: {e}")
     finally:
         if conn:
             cursor.close()

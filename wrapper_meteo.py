@@ -142,17 +142,14 @@ if __name__ == "__main__":
     # Check that the API key is provided
     if not API_KEY:
         raise ValueError("OPENWEATHERMAP_API_KEY not set in the environment!")
-    else:
-        print("🔑 OpenWeatherMap API key found.")
-        print(f"API Key: {API_KEY}")
     
     # Instantiate the wrapper for OpenWeatherMap
     meteo_wrapper = OpenWeatherMapWrapper(API_KEY)
     
     # Retrieve the forecast data for a specified location (e.g., Marseille,FR)
     forecast_df = meteo_wrapper.get_forecast("Marseille,FR")
-    print("Sample meteo forecast data:")
-    print(forecast_df.head())
+    # print("Sample meteo forecast data:")
+    # print(forecast_df.head())
     
     # Insert the normalized forecast data into the PostgreSQL table
     inject_meteo_to_postgres(forecast_df, TABLE_NAME)

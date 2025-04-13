@@ -61,22 +61,22 @@ def inject_csv_to_postgres(csv_path, table_name):
         print(f"✅ Data inserted successfully into table '{table_name}'.")
         
         # # ➕ Add geometry column to the table (PostGIS)
-        # with engine.connect() as connection:
-        #     print("🧩 Activating PostGIS extension...")
-        #     connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+        with engine.begin() as connection:
+            print("🧩 Activating PostGIS extension...")
+            connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
             
-        #     print("🧭 Adding geometry column 'geom'...")
-        #     connection.execute(text(f"""
-        #         ALTER TABLE {table_name}
-        #         ADD COLUMN IF NOT EXISTS geom geometry(Point, 4326);
-        #     """))
+            print("🧭 Adding geometry column 'geom'...")
+            connection.execute(text(f"""
+                ALTER TABLE {table_name}
+                ADD COLUMN IF NOT EXISTS geom geometry(Point, 4326);
+            """))
             
-        #     print("📍 Populating 'geom' column from longitude and latitude...")
-        #     connection.execute(text(f"""
-        #         UPDATE {table_name}
-        #         SET geom = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
-        #         WHERE longitude IS NOT NULL AND latitude IS NOT NULL;
-        #     """))
+            print("📍 Populating 'geom' column from longitude and latitude...")
+            connection.execute(text(f"""
+                UPDATE {table_name}
+                SET geom = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)
+                WHERE longitude IS NOT NULL AND latitude IS NOT NULL;
+            """))
         
         print(f"✅ Table '{table_name}' now contains geometry and is ready for spatial queries.")
     except Exception as e:

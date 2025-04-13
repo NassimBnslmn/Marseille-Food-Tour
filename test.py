@@ -1,34 +1,39 @@
 import pandas as pd
+import psycopg2
+from sqlalchemy import create_engine, types, text
+from dotenv import load_dotenv
+import os
 
-# Load the CSVs
-df = pd.read_csv("evenement_musicale.csv", sep=",")
+load_dotenv()
 
-# find frequency ratio of Marseille in Lieu: Ville
-# drop rows where Lieu: Ville is not Marseille
-df = df[df["Lieu: Ville"] == "Marseille"]
+# 🗂️ Environment variables
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 
-# Split the Horaires ISO column
-df["date_debut"] = df["Horaires ISO"].str.split("->").str[0].str.strip()
-df["date_fin"] = df["Horaires ISO"].str.split("->").str[1].str.strip()
+TABLE_NAME = "evenements_musicaux"
 
-# Optionally convert to datetime
-df["date_debut"] = pd.to_datetime(df["date_debut"], errors="coerce")
-df["date_fin"] = pd.to_datetime(df["date_fin"], errors="coerce")
+try:
+    engine = create_engine(
+        f'postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}'
+    )
 
-# drop column test
-df.drop(columns=["Horaires ISO", "Horaires détaillés","Dernière date"], inplace=True)
+    with engine.begin() as connection:
+        connection.execute(text("CREATE EXTENSION IF NOT EXISTS postgis;"))
+        connection.execute(text(f"""
+            ALTER TABLE {TABLE_NAME}
+            ADD COLUMN IF NOT EXISTS geog geography(Point, 4326);
+        """))
+        connection.execute(text(f"""
+            UPDATE {TABLE_NAME}
+            SET geog = ST_SetSRID(ST_MakePoint(longitude, latitude), 4326)::geography
+            WHERE longitude IS NOT NULL AND latitude IS NOT NULL;
+        """))
 
-df = df.rename(columns={
-    "Titre": "titre",
-    "Description": "description",
-    "Lieu: Nom": "nom_lieu",
-    "Lieu: Adresse": "adresse",
-    "Lieu: Code postal": "code_postal",
-    "Lieu: Ville": "ville",
-    "Lieu: Latitude": "latitude",
-    "Lieu: Longitude": "longitude"
-})
-# remove decimal from Lieu: Code postal
-df["code_postal"] = df["code_postal"].astype(int)
+        print("🧭 Geography column 'geog' added and populated.")
 
-df.to_csv("evenement_musical_cleaned.csv", index=False, sep=",")
+except Exception as e:
+    print(f"❌ Error: {e}")
+
