@@ -29,6 +29,8 @@ def clean_and_modify_csv(csv_input_path, csv_output_path):
     if 'review_count' in df.columns:
         df['review_count'] = df['review_count'].astype(float).round(0).astype('Int64')  # Use Int64 to keep NaNs
 
+    df["code_postal"] = pd.to_numeric(df["code_postal"], errors='coerce').astype("Int64")
+
     # Save the modified dataframe back to a CSV
     df.to_csv(csv_output_path, index=False, sep=",")
 

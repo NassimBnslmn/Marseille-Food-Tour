@@ -1,17 +1,21 @@
 import pandas as pd
 import psycopg2
 from sqlalchemy import create_engine, types
+from dotenv import load_dotenv
+import os
+load_dotenv()
 
-# 🔧 Configuration PostgreSQL
-DB_NAME = "food_tour"
-DB_USER = "postgres"
-DB_PASSWORD = "root"
-DB_HOST = "localhost"
-DB_PORT = "5432"
+# 🗂️ Variables d'environnement
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
 
 TABLE_NAME = "restaurants"
 CSV_PATH = "restaurants_final.csv"
 
+# 🧱 Types de colonnes
 column_types = {
     "nom": types.Text(),
     "description": types.Text(),
@@ -22,7 +26,9 @@ column_types = {
     "longitude": types.Numeric(9, 6),
     "periode_ouverte": types.Text(),
     "specialites": types.Text(),
-    "classements": types.Text()
+    "review_count": types.Integer(),
+    "google_note": types.Numeric(2, 1)
+    # Pas de géométrie à ajouter ici, on a fait cela via pgAdmin
 }
 
 def inject_csv_to_postgres(csv_path, table_name):
@@ -31,8 +37,6 @@ def inject_csv_to_postgres(csv_path, table_name):
         
         print(f"📄 Lecture du fichier CSV : {csv_path}")
         df = pd.read_csv(csv_path)
-
-        df["code_postal"] = pd.to_numeric(df["code_postal"], errors='coerce').astype("Int64")
 
         print(f"📤 Insertion dans la table '{table_name}' avec types explicites...")
         df.to_sql(table_name, engine, if_exists='replace', index=False, dtype=column_types)
@@ -43,7 +47,8 @@ def inject_csv_to_postgres(csv_path, table_name):
 
 if __name__ == "__main__":
     inject_csv_to_postgres(CSV_PATH, TABLE_NAME)
-    # test select
+
+    # 🔎 Test rapide de SELECT
     try:
         conn = psycopg2.connect(
             dbname=DB_NAME,
@@ -53,7 +58,7 @@ if __name__ == "__main__":
             port=DB_PORT
         )
         cursor = conn.cursor()
-        cursor.execute(f"SELECT * FROM {TABLE_NAME} LIMIT 5;")
+        cursor.execute(f"SELECT nom, latitude, longitude FROM {TABLE_NAME} LIMIT 5;")
         rows = cursor.fetchall()
         for row in rows:
             print(row)
@@ -64,4 +69,3 @@ if __name__ == "__main__":
             cursor.close()
             conn.close()
             print("✅ Connexion fermée.")
-
