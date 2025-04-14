@@ -1,4 +1,4 @@
-DROP MATERIALIZED VIEW IF EXISTS public.baignades_nearest_stops CASCADE;
+DROP MATERIALIZED VIEW IF EXISTS baignades_nearest_stops CASCADE;
 
 create materialized view if not exists baignades_nearest_stops as
    with ranked_stops as (

@@ -1,4 +1,4 @@
-drop view if exists evenements_arrets;
+drop materialized view if exists evenements_arrets;
 create MATERIALIZED view if not exists evenements_arrets as
    with ranked_stops as (
       select e.titre as evenement,

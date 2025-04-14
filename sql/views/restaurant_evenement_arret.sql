@@ -27,7 +27,7 @@ WITH nearest_restaurants AS (
 event_to_restaurant AS (
     SELECT *
     FROM nearest_restaurants
-    WHERE rn_restaurant = 1
+    WHERE rn_restaurant =1
 ),
 nearest_stops AS (
     SELECT 
