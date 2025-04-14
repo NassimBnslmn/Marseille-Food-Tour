@@ -3,8 +3,6 @@ create or replace view baignades_meteo as
           b.categorie,
           b.baignade_surveillee,
           b.adresse,
-          b.code_postal,
-          b.ville,
           b.numero_de_telephone,
           b.geog as geog_baignade,
           m.timestamp as forecast_time,

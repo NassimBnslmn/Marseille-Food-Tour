@@ -2,6 +2,10 @@ drop view if exists evenements_arrets;
 create MATERIALIZED view if not exists evenements_arrets as
    with ranked_stops as (
       select e.titre as evenement,
+                e.description as evenement_description,
+                e.nom_lieu as evenement_lieu,
+                e.date_debut as debut_evenement,
+                e.date_fin as fin_evenement,
              a.id as arret_id,
              a.name as arret_name,
              e.geog as geog_evenement,
@@ -23,10 +27,14 @@ create MATERIALIZED view if not exists evenements_arrets as
       )
    )
    select evenement,
+            evenement_description,
+            evenement_lieu,
+            debut_evenement,
+            fin_evenement,
           arret_id,
           arret_name,
           geog_evenement,
           geog_arret,
           distance
      from ranked_stops
-    where rn = 1;
+    where rn <= 3;

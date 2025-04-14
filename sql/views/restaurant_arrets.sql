@@ -1,41 +1,40 @@
-drop materialized view if exists restaurant_nearest_stops;
+DROP MATERIALIZED VIEW IF EXISTS restaurant_nearest_stops;
 
-create materialized view if not exists restaurant_nearest_stops as
-   with ranked_stops as (
-      select r.nom as restaurant_name,
-             a.id as arret_id,
-             a.name as arret_name,
-             r.geog as geog_restaurant,
-             a.geog as geog_arret,
-             r.google_note as note,
-             r.review_count as review_count,
-             st_distance(
-                r.geog,
-                a.geog
-             ) as distance,
-             row_number()
-             over(partition by r.nom,
-                               a.name
-                  order by r.geog <-> a.geog
-             ) as rn
-        from restaurants r
-        join arrets_transport a
-      on st_dwithin(
-         r.geog,
-         a.geog,
-         300
-      )  -- only consider stops within 1km (adjust as needed)
-   )
-   select restaurant_name,
-            note,
-            review_count,
-          geog_restaurant,
-          arret_id,
-          arret_name,
-          geog_arret,
-          distance,
-          rn as stop_rank
-     from ranked_stops
-    where rn = 1  -- Ensures only the closest unique arret_name for each restaurant
-    order by restaurant_name,
-             stop_rank;
+CREATE MATERIALIZED VIEW IF NOT EXISTS restaurant_nearest_stops AS
+WITH ranked_stops AS (
+    SELECT 
+        r.nom AS restaurant_name,
+        r.description AS restaurant_description,
+        r.specialites,
+        r.periode_ouverte,
+        r.google_note AS note,
+        r.review_count AS review_count,
+        r.geog AS geog_restaurant,
+        a.id AS arret_id,
+        a.name AS arret_name,
+        a.geog AS geog_arret,
+        ST_Distance(r.geog, a.geog) AS distance,
+        ROW_NUMBER() OVER (
+            PARTITION BY r.nom, a.name
+            ORDER BY r.geog <-> a.geog
+        ) AS rn
+    FROM restaurants r
+    JOIN arrets_transport a
+        ON ST_DWithin(r.geog, a.geog, 400)  -- within 400m
+)
+SELECT 
+    restaurant_name,
+    restaurant_description,
+    specialites,
+    periode_ouverte,
+    note,
+    review_count,
+    geog_restaurant,
+    arret_id,
+    arret_name,
+    geog_arret,
+    distance,
+    rn AS stop_rank
+FROM ranked_stops
+WHERE rn <= 3
+ORDER BY restaurant_name, stop_rank;
